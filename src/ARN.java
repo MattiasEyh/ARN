@@ -16,20 +16,40 @@ import java.util.*;
  *            le type des clés stockées dans l'arbre
  */
 public class ARN<E> extends AbstractCollection<E> {
+
+    // Constantes
+    private final Noeud NOEUD_SENTINELLE = new Noeud(null);
+
+    public static final String ANSI_BLACK = "\u001B[30m";
+    public static final String ANSI_RED = "\u001B[31m";
+    public static final String ANSI_RESET = "\u001B[0m";
+
+    // Variables
     private Noeud racine;
+
     private int taille;
+
     private Comparator<? super E> cmp;
 
     private class Noeud {
+
         E cle;
+
         Noeud gauche;
         Noeud droit;
         Noeud pere;
 
+        char couleur; // 'R' = rouge, 'N' = noir
+
         Noeud(E cle) {
+
             this.cle = cle;
-            this.gauche = null;
-            this.droit = null;
+
+            this.gauche = NOEUD_SENTINELLE;
+            this.droit = NOEUD_SENTINELLE;
+            this.pere = NOEUD_SENTINELLE;
+
+            this.couleur = 'N';
         }
 
         /**
@@ -42,10 +62,8 @@ public class ARN<E> extends AbstractCollection<E> {
         Noeud minimum() {
             Noeud x = this;
 
-            if (this == null) return null;
-
-            while(x.gauche != null) x = x.gauche;
-            return x;
+            if(this.gauche == NOEUD_SENTINELLE) return this;
+            return this.gauche.minimum();
         }
 
         /**
@@ -57,19 +75,54 @@ public class ARN<E> extends AbstractCollection<E> {
          */
         Noeud suivant() {
 
-            Noeud x = this;
-            Noeud y = null;
+            Noeud noeudCourant = this;
 
-            if (this == null) return null;
+            if(noeudCourant.droit != NOEUD_SENTINELLE)
+                return noeudCourant.droit.minimum();
 
-            if ( x.droit != null) return x.droit.minimum();
-            y = x.pere;
-            while( y != null && x.equals(y.droit)){
-                x = y;
-                y = y.pere;
+            Noeud noeudPere = noeudCourant.pere;
+
+            while(noeudPere != NOEUD_SENTINELLE && noeudCourant == noeudPere.droit) {
+                noeudCourant = noeudPere;
+                noeudPere = noeudPere.pere;
             }
+            return noeudPere;
+        }
 
-            return y;
+        private void rotationGauche() {
+            Noeud noeudTmp = this.droit;
+            noeudTmp.pere = this.pere;
+
+            if(this.pere.gauche == this)
+                this.pere.gauche = noeudTmp;
+            else this.pere.droit = noeudTmp;
+
+            this.pere = noeudTmp;
+            this.droit = noeudTmp.gauche;
+
+            noeudTmp.gauche = this;
+
+            if(racine == this)
+                racine = noeudTmp;
+        }
+
+        private void rotationDroite(){
+
+            Noeud noeudTmp = this.gauche;
+
+            noeudTmp.pere = this.pere;
+
+            if(this.pere.droit == this)
+                this.pere.droit = noeudTmp;
+            else this.pere.gauche = noeudTmp;
+
+            this.pere = noeudTmp;
+            this.gauche = noeudTmp.droit;
+
+            noeudTmp.droit = this;
+
+            if(racine == this)
+                racine = noeudTmp;
         }
     }
 
@@ -79,7 +132,7 @@ public class ARN<E> extends AbstractCollection<E> {
      * Crée un arbre vide. Les éléments sont ordonnés selon l'ordre naturel
      */
     public ARN() {
-        this.racine = null;
+        this.racine = NOEUD_SENTINELLE;
         this.taille = 0;
         this.cmp = (e1, e2) -> ((Comparable<E>)e1).compareTo(e2);
     }
@@ -92,7 +145,7 @@ public class ARN<E> extends AbstractCollection<E> {
      *            le comparateur utilisé pour définir l'ordre des éléments
      */
     public ARN(Comparator<? super E> cmp) {
-        this.racine = null;
+        this.racine = NOEUD_SENTINELLE;
         this.taille = 0;
         this.cmp = cmp;
     }
@@ -106,13 +159,80 @@ public class ARN<E> extends AbstractCollection<E> {
      */
     public ARN(Collection<? extends E> c) {
 
-        this.racine = null;
+        this.racine = NOEUD_SENTINELLE;
         this.taille = 0;
-        this.cmp = (e1, e2) -> ((Comparable<E>)e1).compareTo(e2);;
+        this.cmp = (e1, e2) -> ((Comparable<E>)e1).compareTo(e2);
         addAll(c);
 
     }
 
+
+    @Override
+    public boolean add(E e)
+    {
+        try {
+            if (e == null) return false;
+
+            Noeud z = new Noeud(e);
+            Noeud y = NOEUD_SENTINELLE;
+            Noeud x = this.racine;
+
+            while (x != NOEUD_SENTINELLE) {
+                y = x;
+
+                if (cmp.compare(z.cle, x.cle) < 0)
+                    x = x.gauche;
+                else
+                    x = x.droit;
+            }
+
+            z.pere = y;
+
+            if (y == NOEUD_SENTINELLE) {
+                racine = z;
+            } else {
+                if (this.cmp.compare(z.cle, y.cle) < 0) y.gauche = z;
+                else y.droit = z;
+            }
+
+            z.gauche = z.droit = NOEUD_SENTINELLE;
+
+            z.couleur = 'R';
+            this.taille++;
+            insCorrection(z);
+            return true;
+
+        }catch (Exception exception) {
+            return false;
+        }
+    }
+
+
+    @Override
+    public boolean addAll(Collection<? extends E> c)
+    {
+        for( E e : c )
+            if( !this.add(e) )
+                return false;
+
+        return true;
+    }
+
+    @Override
+    public boolean remove(Object o) {
+        if(contains(o))
+            return supprimer(rechercher(o)) != NOEUD_SENTINELLE;
+        return false;
+    }
+
+    @Override
+    public boolean removeAll(Collection<?> c) {
+        boolean res = false;
+        for(Object o : c)
+            while(remove(o))
+                res = true;
+        return res;
+    }
 
     @Override
     public Iterator<E> iterator() {
@@ -135,63 +255,164 @@ public class ARN<E> extends AbstractCollection<E> {
      * @return le noeud qui contient la clé ou null si la clé n'est pas trouvée.
      */
     private Noeud rechercher(Object o) {
+
         Noeud x = racine;
 
-        if (o == null) return null;
-
-        while(x != null && x.cle != o) {
-
+        while(x != NOEUD_SENTINELLE && (cmp.compare(x.cle, (E) o) != 0)) {
+            if (cmp.compare(x.cle, (E) o) > 0) x = x.gauche;
+            else x = x.droit;
         }
         return x;
 
     }
 
+
     /**
-     * Supprime le noeud z. Cette méthode peut être utilisée dans
-     * {@link #remove(Object)} et {@link Iterator#remove()}
+     * Corrige l'arbre binaire rouge et noire, en vérifiant qu'il respecte toujours les règles.
      *
-     * @param z
-     *            le noeud à supprimer
-     * @return le noeud contenant la clé qui suit celle de z dans l'ordre des
-     *         clés. Cette valeur de retour peut être utile dans
-     *         {@link Iterator#remove()}
+     * @param z le noeud à insérer
+     */
+    private void insCorrection(Noeud z){
+        Noeud y;
+
+        while(z.pere.couleur == 'R') {
+            if(z.pere == z.pere.pere.gauche){
+                y = z.pere.pere.droit;
+                if(y.couleur == 'R'){
+                    z.pere.couleur = 'N';
+                    y.couleur = 'N';
+                    z.pere.pere.couleur = 'R';
+                    z = z.pere.pere;
+                } else {
+                    if(z == z.pere.droit) {
+                        z = z.pere;
+                        z.rotationGauche();
+                    }
+                    z.pere.couleur = 'N';
+                    z.pere.pere.couleur = 'R';
+                    (z.pere.pere).rotationDroite();
+                }
+            } else {
+                y = z.pere.pere.gauche;
+
+                if(y.couleur == 'R'){
+                    z.pere.couleur = 'N';
+                    y.couleur = 'N';
+                    z.pere.pere.couleur = 'R';
+
+                    z = z.pere.pere;
+                } else {
+                    if(z == z.pere.gauche) {
+                        z = z.pere;
+                        z.rotationDroite();
+                    }
+                    z.pere.couleur = 'N';
+                    z.pere.pere.couleur = 'R';
+                    (z.pere.pere).rotationGauche();
+                }
+            }
+        }
+        racine.couleur = 'N';
+    }
+
+
+    /**
+     * Supprime le noeud z.
+     *
+     * @param z le noeud à supprimer
+     * @return le noeud contenant la clé qui suit celle de z dans l'ordre des clés.
      */
     private Noeud supprimer(Noeud z) {
-        if( z == null ) return null;
+        Noeud y,x;
 
-        Noeud y;
-        Noeud suiv = z.suivant();
-
-        if( z.gauche == null || z.droit == null ) y = z;
-        else                               y = z.suivant();
-        // y est le seul noeud a detacher
-
-        Noeud x;
-
-        if( y == null ) return null;
-
-        if( y.gauche != null ) x = y.gauche;
-        else                   x = y.droit;
-        // x est le fils unisaue de y ou null si il n'y as pas de fils
-
-        if( x != null ) x.pere = y.pere;
-
-        if( y.pere == null ) // suppression de la racine
-        {
-            this.racine = x;
+        if(z.gauche == NOEUD_SENTINELLE || z.droit == NOEUD_SENTINELLE) {
+            y = z;
+        } else {
+            y = z.suivant();
         }
-        else
-        {
-            if( y.equals(y.pere.gauche) ) y.pere.gauche = x;
-            else                          y.pere.droit  = x;
+        if(y.gauche != NOEUD_SENTINELLE) {
+            x = y.gauche;
+        } else {
+            x = y.droit;
         }
-
-        if( !y.equals(z) )
+        x.pere = y.pere;
+        if(y.pere == NOEUD_SENTINELLE) {
+            racine = x;
+        } else {
+            if(y == y.pere.gauche) {
+                y.pere.gauche = x;
+            } else {
+                y.pere.droit = x;
+            }
+        }
+        if(y != z)
             z.cle = y.cle;
 
-        this.taille--;
+        if(y.couleur == 'N')
+            suppCorrection(x);
 
-        return suiv;
+        return z;
+    }
+    /**
+     * Corrige l'arbre binaire rouge et noire, en vérifiant qu'il respecte toujours les règles.
+     *
+     * @param x le noeud à supprimer
+     */
+    private void suppCorrection(Noeud x) {
+        Noeud w;
+
+        while(x != racine && x.couleur == 'N') {
+            if(x == x.pere.gauche) {
+                w = x.pere.droit;
+                if(w.couleur == 'R') {
+                    w.couleur = 'N';
+                    x.pere.couleur = 'R';
+                    (x.pere).rotationGauche();
+                    w = x.pere.droit;
+                }
+                if(w.gauche.couleur == 'N' && w.droit.couleur == 'N') {
+                    w.couleur = 'R';
+                    x = x.pere;
+                } else {
+                    if(w.droit.couleur == 'N') {
+                        w.gauche.couleur = 'N';
+                        w.couleur = 'R';
+                        w.rotationDroite();
+                        w = x.pere.droit;
+                    }
+                    w.couleur = x.pere.couleur;
+                    x.pere.couleur = 'N';
+                    w.droit.couleur = 'N';
+                    (x.pere).rotationGauche();
+                    racine = x;
+                }
+            } else {
+                w = x.pere.gauche;
+                if(w.couleur == 'R') {
+                    w.couleur = 'N';
+                    x.pere.couleur = 'R';
+                    (x.pere).rotationDroite();
+                    w = x.pere.gauche;
+                }
+                if(w.droit.couleur == 'N' && w.gauche.couleur == 'N') { //cas 2
+                    w.couleur = 'R';
+                    x = x.pere;
+                } else {
+                    if(w.gauche.couleur == 'N') {
+                        w.droit.couleur = 'N';
+                        w.couleur = 'R';
+                        w.rotationGauche();
+                        w = x.pere.gauche;
+                    }
+                    w.couleur = x.pere.couleur;
+                    x.pere.couleur = 'N';
+                    w.gauche.couleur = 'N';
+                    (x.pere).rotationDroite();
+                    racine = x;
+                }
+            }
+        }
+        x.couleur = 'N';
     }
 
     /**
@@ -208,7 +429,7 @@ public class ARN<E> extends AbstractCollection<E> {
         {
             super();
 
-            this.courant = null;
+            this.courant = NOEUD_SENTINELLE;
             this.suivant = ARN.this.racine.minimum();
         }
 
@@ -228,7 +449,10 @@ public class ARN<E> extends AbstractCollection<E> {
         public void remove()
         {
             ARN.this.supprimer(this.courant);
+            this.courant = NOEUD_SENTINELLE;
         }
+
+
     }
 
     // Pour un "joli" affichage
@@ -241,7 +465,7 @@ public class ARN<E> extends AbstractCollection<E> {
     }
 
     private void toString(Noeud x, StringBuffer buf, String path, int len) {
-        if (x == null)
+        if (x == NOEUD_SENTINELLE)
             return;
         toString(x.droit, buf, path + "D", len);
         for (int i = 0; i < path.length(); i++) {
@@ -254,8 +478,13 @@ public class ARN<E> extends AbstractCollection<E> {
                 c = '|';
             buf.append(c);
         }
-        buf.append("-- " + x.cle.toString());
-        if (x.gauche != null || x.droit != null) {
+
+        if(x.couleur == 'R')
+            buf.append("--" + ANSI_RED + x.cle.toString() + ANSI_RESET);
+        else
+            buf.append("--" + ANSI_BLACK + x.cle.toString() + ANSI_RESET);
+
+        if (x.gauche != NOEUD_SENTINELLE || x.droit != NOEUD_SENTINELLE) {
             buf.append(" --");
             for (int j = x.cle.toString().length(); j < len; j++)
                 buf.append('-');
@@ -266,80 +495,59 @@ public class ARN<E> extends AbstractCollection<E> {
     }
 
     private int maxStrLen(Noeud x) {
-        return x == null ? 0 : Math.max(x.cle.toString().length(),
+        return x == NOEUD_SENTINELLE ? 0 : Math.max(x.cle.toString().length(),
                 Math.max(maxStrLen(x.gauche), maxStrLen(x.droit)));
     }
 
-    @Override
-    public boolean add(E e)
-    {
-        if( e == null ) return false;
 
-        Noeud z = new Noeud(e);
-        Noeud y = null;
-        Noeud x = racine;
-
-        while (x != null)
-        {
-            y = x;
-
-            if (cmp.compare(z.cle, x.cle) < 0)
-                x = x.gauche;
-            else
-                x = x.droit;
-        }
-
-        z.pere = y;
-
-        if( y == null )
-        {
-            racine = z;
-        }
-        else
-        {
-            if( this.cmp.compare(z.cle, y.cle) < 0) y.gauche = z;
-            else                                    y.droit  = z;
-        }
-
-        z.gauche = z.droit = null;
-
-        this.taille++;
-
-        return true;
-    }
-
-
-    @Override
-    public boolean addAll(Collection<? extends E> c)
-    {
-        for( E e : c )
-            if( !this.add(e) )
-                return false;
-
-        return true;
-    }
 
     public static void main(String[] args) {
 
-        ARN<Integer> ARN = new ARN<>();
-        ARN.add(5);
-        ARN.add(8);
-        ARN.add(2);
-        ARN.add(9);
-        ARN.add(-2);
-        ARN.add(-3);
-        ARN.add(0);
-        ARN.add(1);
-        System.out.println(ARN);
-        Iterator<Integer> it = ARN.iterator();
-        System.out.println(ARN.size());
-        while (it.hasNext())
+        ARN<Integer> a = new ARN<>();
+
+        ArrayList<Integer> b = new ArrayList<>();
+
+        b.add(7);
+        b.add(14);
+        b.add(5);
+
+        for (int i = 0; i < 10; i++)
+            b.add((int) (Math.random() * 10));
+
+        a.add(6);
+        System.out.println("Ajout du noeud de valeur 6 :\n" + a);
+
+        a.add(8);
+        System.out.println("Ajout du noeud de valeur 6 :\n" + a);
+
+        a.add(-25);
+        System.out.println("Ajout du noeud de valeur -25 :\n" + a);
+
+
+        a.addAll(b);
+        System.out.println("Ajout de 10 valeurs aléatoires :\n" + a);
+
+        a.removeAll(b);
+        System.out.println("Supression de la tout :\n" + a);
+
+
+        System.out.println("Génération d'un arbre aléatoire à 15 valeurs : ");
+
+        b.clear();
+        a.removeAll(b);
+
+
+        int max = 80;
+        int min = -25;
+        int range = max - min + 1;
+        for (int i=0; i<10; i++)
         {
-            int cle = it.next();
-            if (cle == 2) it.remove();
+            a.add((int)(Math.random() * range) + min);
         }
-        System.out.println(ARN);
-        System.out.println(ARN.size());
+
+        System.out.println(a);
+
+
 
     }
 }
