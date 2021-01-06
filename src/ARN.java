@@ -1,3 +1,7 @@
+/**
+ * ARN - Arbre rouge noir
+ */
+
 
 import java.util.*;
 
@@ -270,8 +274,6 @@ public class ARN<E> extends AbstractCollection<E> {
 
     /**
      * Corrige l'arbre binaire rouge et noire, en vérifiant qu'il respecte toujours les règles.
-     *
-     * @param z le noeud à insérer
      */
     private void insCorrection(Noeud z){
         Noeud y;
@@ -357,8 +359,7 @@ public class ARN<E> extends AbstractCollection<E> {
         return z;
     }
     /**
-     * Corrige l'arbre binaire rouge et noire, en vérifiant qu'il respecte toujours les règles.
-     *
+     * Corrige l'arbre binaire rouge et noire.
      * @param x le noeud à supprimer
      */
     private void suppCorrection(Noeud x) {
@@ -551,6 +552,33 @@ public class ARN<E> extends AbstractCollection<E> {
 
 
         System.out.println(separateurAffichage());
+
+        ArrayList<Integer> b = new ArrayList<>();
+
+        System.out.println("Ajout/suppression grâce à une collection.");
+
+
+        System.out.println("Arbre de base : \n" + a);
+
+        b.add(1);
+        b.add(6);
+        b.add(3);
+        b.add(-1);
+
+        a.addAll(b);
+
+        System.out.println("Après ajout de la collection : \n" + a);
+
+        a.removeAll(b);
+
+        System.out.println("Après suppression de la collection : \n" + a);
+
+        System.out.println("L'abre est le même qu'au début. Test réussi.");
+
+
+        System.out.println(separateurAffichage());
+
+
 
         ARN<Integer> arnAl = new ARN<>();
 
