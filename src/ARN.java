@@ -1,3 +1,4 @@
+
 import java.util.*;
 
 /**
@@ -61,9 +62,9 @@ public class ARN<E> extends AbstractCollection<E> {
          */
         Noeud minimum() {
             Noeud x = this;
-
-            if(this.gauche == NOEUD_SENTINELLE) return this;
-            return this.gauche.minimum();
+            while (x.gauche != NOEUD_SENTINELLE)
+                x = x.gauche;
+            return x;
         }
 
         /**
@@ -351,6 +352,8 @@ public class ARN<E> extends AbstractCollection<E> {
         if(y.couleur == 'N')
             suppCorrection(x);
 
+        this.taille--;
+
         return z;
     }
     /**
@@ -435,7 +438,7 @@ public class ARN<E> extends AbstractCollection<E> {
 
         public boolean hasNext()
         {
-            return ARN.this.taille > 0 && this.suivant != null;
+            return ARN.this.taille > 0 && this.suivant != NOEUD_SENTINELLE;
         }
 
         public E next()
@@ -499,55 +502,65 @@ public class ARN<E> extends AbstractCollection<E> {
                 Math.max(maxStrLen(x.gauche), maxStrLen(x.droit)));
     }
 
+    public static String separateurAffichage()
+    {
+        return "\n-----------------------------------------\nTests suivants\n-----------------------------------------\n";
+    }
 
 
     public static void main(String[] args) {
 
+
         ARN<Integer> a = new ARN<>();
 
-        ArrayList<Integer> b = new ArrayList<>();
+        System.out.println("\nAjouts de plusieurs valeurs");
+        a.add(45);
+        a.add(12);
+        a.add(87);
+        a.add(67);
+        a.add(4);
+        a.add(-6);
 
-        b.add(7);
-        b.add(14);
-        b.add(5);
+        System.out.println("Affichage de l'arbre : ");
+        System.out.println(a);
+        System.out.println("Taille de l'arbre :");
+        System.out.println(a.size());
 
-        for (int i = 0; i < 10; i++)
-            b.add((int) (Math.random() * 10));
+        System.out.println(separateurAffichage());
 
-        a.add(6);
-        System.out.println("Ajout du noeud de valeur 6 :\n" + a);
+        System.out.println("Nous allons vérifier si la méthode contains() fonctionne correctement :");
+        System.out.println("\t-L'abre contient 87. Résultat attendu = vrai. Résultat : " + a.contains(87));
+        System.out.println("\t-L'abre contient 32. Résultat attendu = faux. Résultat : " + a.contains(32));
+        System.out.println("\t-L'abre contient 47. Résultat attendu = faux. Résultat : " + a.contains(47));
+        System.out.println("\t-L'abre contient -6. Résultat attendu = vrai. Résultat : " + a.contains(-6));
+        System.out.println("\t-L'abre contient 4.  Résultat attendu = vrai. Résultat : " + a.contains(4));
 
-        a.add(8);
-        System.out.println("Ajout du noeud de valeur 6 :\n" + a);
+        a.remove(-6);
+        System.out.println("\nLe noeud avec la clé -6 est toujours dans l'arbre ?");
 
-        a.add(-25);
-        System.out.println("Ajout du noeud de valeur -25 :\n" + a);
-
-
-        a.addAll(b);
-        System.out.println("Ajout de 10 valeurs aléatoires :\n" + a);
-
-        a.removeAll(b);
-        System.out.println("Supression de la tout :\n" + a);
-
-
-        System.out.println("Génération d'un arbre aléatoire à 15 valeurs : ");
-
-        b.clear();
-        a.removeAll(b);
+        if (a.contains(-6))
+            System.out.println("Le test a échoué, le noeud est toujours dans l'arbre");
+        else
+            System.out.println("Le test est un succès. Le noeud à été supprimé");
 
 
-        int max = 80;
-        int min = -25;
-        int range = max - min + 1;
-        for (int i=0; i<10; i++)
-        {
-            a.add((int)(Math.random() * range) + min);
-        }
 
         System.out.println(a);
+        System.out.println("Taille de l'arbre :");
+        System.out.println(a.size());
 
 
+        System.out.println(separateurAffichage());
+
+        ARN<Integer> arnAl = new ARN<>();
+
+        System.out.println("\n/------------------------/\n/    Arbre aléatoire     /\n/------------------------/");
+
+        Random r = new Random();
+        for(int i = 0; i < 30; i++) {
+            arnAl.add(r.nextInt(200));
+        }
+        System.out.println(arnAl);
 
     }
 }
